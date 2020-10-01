@@ -24,7 +24,7 @@ import Data.Generic.Rep.Show (genericShow)
 import Data.Lens (Traversal', wander)
 import Data.Maybe (Maybe(..), maybe)
 import Text.Parsing.Parser (Parser)
-import URI.Authority (Authority(..), AuthorityOptions, AuthorityParseOptions, AuthorityPrintOptions, Host(..), IPv4Address, IPv6Address, Port, RegName, UserInfo, _IPv4Address, _IPv6Address, _NameAddress, _hosts, _userInfo)
+import URI.Authority (Authority, AuthorityOptions, AuthorityParseOptions, AuthorityPrintOptions, Host(..), IPv4Address, IPv6Address, Port, RegName, UserInfo, _IPv4Address, _IPv6Address, _NameAddress, _hosts, _userInfo)
 import URI.Authority as Authority
 import URI.Common (URIPartParseError, wrapParser)
 import URI.Path (Path)

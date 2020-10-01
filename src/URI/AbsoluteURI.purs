@@ -17,16 +17,16 @@ import Prelude
 
 import Data.Array as Array
 import Data.Either (Either)
-import Data.Generic.Rep (class Generic)
-import Data.Generic.Rep.Show (genericShow)
-import Data.Lens (Lens', lens)
+import Data.Lens (Lens')
+import Data.Lens.Record (prop)
 import Data.Maybe (Maybe(..))
 import Data.String as String
+import Data.Symbol (SProxy(..))
 import Text.Parsing.Parser (Parser)
 import Text.Parsing.Parser.Combinators (optionMaybe)
 import Text.Parsing.Parser.String (eof)
 import URI.Common (URIPartParseError, wrapParser)
-import URI.HierarchicalPart (Authority(..), AuthorityOptions, AuthorityParseOptions, AuthorityPrintOptions, HierPath, HierarchicalPart(..), HierarchicalPartOptions, HierarchicalPartParseOptions, HierarchicalPartPrintOptions, Host(..), IPv4Address, IPv6Address, Path(..), PathAbsolute(..), PathRootless(..), Port, RegName, UserInfo, _IPv4Address, _IPv6Address, _NameAddress, _authority, _hierPath, _hosts, _path, _userInfo)
+import URI.HierarchicalPart (Authority, AuthorityOptions, AuthorityParseOptions, AuthorityPrintOptions, HierPath, HierarchicalPart(..), HierarchicalPartOptions, HierarchicalPartParseOptions, HierarchicalPartPrintOptions, Host(..), IPv4Address, IPv6Address, Path(..), PathAbsolute(..), PathRootless(..), Port, RegName, UserInfo, _IPv4Address, _IPv6Address, _NameAddress, _authority, _hierPath, _hosts, _path, _userInfo)
 import URI.HierarchicalPart as HPart
 import URI.Query (Query)
 import URI.Query as Query
@@ -35,12 +35,11 @@ import URI.Scheme as Scheme
 
 -- | A strictly absolute URI. An absolute URI can still contain relative paths
 -- | but is required to have a `Scheme` component.
-data AbsoluteURI userInfo hosts path hierPath query = AbsoluteURI Scheme (HierarchicalPart userInfo hosts path hierPath) (Maybe query)
-
-derive instance eqAbsoluteURI ∷ (Eq userInfo, Eq hosts, Eq path, Eq hierPath, Eq query) ⇒ Eq (AbsoluteURI userInfo hosts path hierPath query)
-derive instance ordAbsoluteURI ∷ (Ord userInfo, Ord hosts, Ord path, Ord hierPath, Ord query) ⇒ Ord (AbsoluteURI userInfo hosts path hierPath query)
-derive instance genericAbsoluteURI ∷ Generic (AbsoluteURI userInfo hosts path hierPath query) _
-instance showAbsoluteURI ∷ (Show userInfo, Show hosts, Show path, Show hierPath, Show query) ⇒ Show (AbsoluteURI userInfo hosts path hierPath query) where show = genericShow
+type AbsoluteURI userInfo hosts path hierPath query =
+  { scheme :: Scheme
+  , hierPart :: HierarchicalPart userInfo hosts path hierPath
+  , query :: Maybe query
+  }
 
 -- | A row type for describing the options fields used by the absolute URI
 -- | parser and printer.
@@ -98,11 +97,12 @@ parser
   ∷ ∀ userInfo hosts path hierPath query r
   . Record (AbsoluteURIParseOptions userInfo hosts path hierPath query r)
   → Parser String (AbsoluteURI userInfo hosts path hierPath query)
-parser opts = AbsoluteURI
-  <$> Scheme.parser
-  <*> HPart.parser opts
-  <*> optionMaybe (wrapParser opts.parseQuery Query.parser)
-  <* eof
+parser opts = ado
+  scheme <- Scheme.parser
+  hierPart <- HPart.parser opts
+  query <- optionMaybe (wrapParser opts.parseQuery Query.parser)
+  eof
+  in { scheme, hierPart, query }
 
 -- | A printer for an absolute URI.
 print
@@ -110,11 +110,11 @@ print
   . Record (AbsoluteURIPrintOptions userInfo hosts path hierPath query r)
   → AbsoluteURI userInfo hosts path hierPath query
   → String
-print opts (AbsoluteURI s h q) =
+print opts { scheme, hierPart, query } =
   String.joinWith "" $ Array.catMaybes
-    [ Just (Scheme.print s)
-    , Just (HPart.print opts h)
-    , Query.print <<< opts.printQuery <$> q
+    [ Just (Scheme.print scheme)
+    , Just (HPart.print opts hierPart)
+    , Query.print <<< opts.printQuery <$> query
     ]
 
 -- | The scheme component of an absolute URI.
@@ -123,10 +123,7 @@ _scheme
   . Lens'
       (AbsoluteURI userInfo hosts path hierPath query)
       Scheme
-_scheme =
-  lens
-    (\(AbsoluteURI s _ _) → s)
-    (\(AbsoluteURI _ h q) s → AbsoluteURI s h q)
+_scheme = prop (SProxy :: _ "scheme")
 
 -- | The hierarchical-part component of an absolute URI.
 _hierPart
@@ -134,10 +131,7 @@ _hierPart
   . Lens'
       (AbsoluteURI userInfo hosts path hierPath query)
       (HierarchicalPart userInfo hosts path hierPath)
-_hierPart =
-  lens
-    (\(AbsoluteURI _ h _) → h)
-    (\(AbsoluteURI s _ q) h → AbsoluteURI s h q)
+_hierPart = prop (SProxy :: _ "hierPart")
 
 -- | The query component of an absolute URI.
 _query
@@ -145,7 +139,4 @@ _query
   . Lens'
       (AbsoluteURI userInfo hosts path hierPath query)
       (Maybe query)
-_query =
-  lens
-    (\(AbsoluteURI _ _ q) → q)
-    (\(AbsoluteURI s h _) q → AbsoluteURI s h q)
+_query = prop (SProxy :: _ "query")

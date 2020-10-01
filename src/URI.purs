@@ -18,8 +18,8 @@ module URI
   , module URI.UserInfo
   ) where
 
-import URI.AbsoluteURI (AbsoluteURI(..))
-import URI.Authority (Authority(..))
+import URI.AbsoluteURI (AbsoluteURI)
+import URI.Authority (Authority)
 import URI.Fragment (Fragment)
 import URI.HierarchicalPart (HierarchicalPart(..), HierPath)
 import URI.Host (Host(..), RegName, IPv4Address, IPv6Address)
@@ -30,8 +30,8 @@ import URI.Path.Rootless (PathRootless(..))
 import URI.Port (Port)
 import URI.Query (Query)
 import URI.RelativePart (RelativePart(..), RelPath)
-import URI.RelativeRef (RelativeRef(..))
+import URI.RelativeRef (RelativeRef)
 import URI.Scheme (Scheme)
-import URI.URI (URI(..))
+import URI.URI (URI)
 import URI.URIRef (URIRef)
 import URI.UserInfo (UserInfo)

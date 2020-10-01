@@ -24,7 +24,7 @@ import Data.Generic.Rep.Show (genericShow)
 import Data.Lens (Traversal', wander)
 import Data.Maybe (Maybe(..), maybe)
 import Text.Parsing.Parser (Parser)
-import URI.Authority (Authority(..), AuthorityOptions, AuthorityParseOptions, AuthorityPrintOptions, Host(..), IPv4Address, IPv6Address, Port, RegName, UserInfo, _IPv4Address, _IPv6Address, _NameAddress, _hosts, _userInfo)
+import URI.Authority (Authority, AuthorityOptions, AuthorityParseOptions, AuthorityPrintOptions, Host(..), IPv4Address, IPv6Address, Port, RegName, UserInfo, _IPv4Address, _IPv6Address, _NameAddress, _hosts, _userInfo)
 import URI.Authority as Authority
 import URI.Common (URIPartParseError, wrapParser)
 import URI.Path (Path(..))
@@ -42,7 +42,9 @@ import URI.Path.Rootless as PathRootless
 -- | no ambiguity in parsing (this is per the spec, not a restriction of the
 -- | library).
 data HierarchicalPart userInfo hosts path hierPath
-  = HierarchicalPartAuth (Authority userInfo hosts) path
+  = HierarchicalPartAuth { authority :: Authority userInfo hosts
+                         , path :: path
+                         }
   | HierarchicalPartNoAuth (Maybe hierPath)
 
 derive instance eqHierarchicalPart ∷ (Eq userInfo, Eq hosts, Eq path, Eq hierPath) ⇒ Eq (HierarchicalPart userInfo hosts path hierPath)
@@ -98,10 +100,10 @@ parser
   → Parser String (HierarchicalPart userInfo hosts path hierPath)
 parser opts = withAuth <|> withoutAuth
   where
-  withAuth =
-    HierarchicalPartAuth
-      <$> Authority.parser opts
-      <*> wrapParser opts.parsePath Path.parser
+  withAuth = ado
+    authority <- Authority.parser opts
+    path <- wrapParser opts.parsePath Path.parser
+    in HierarchicalPartAuth { authority, path }
   withoutAuth =
     HierarchicalPartNoAuth <$> noAuthPath
   noAuthPath
@@ -115,8 +117,8 @@ print
   . Record (HierarchicalPartPrintOptions userInfo hosts path hierPath r)
   → HierarchicalPart userInfo hosts path hierPath → String
 print opts = case _ of
-  HierarchicalPartAuth a p →
-    Authority.print opts a <> Path.print (opts.printPath p)
+  HierarchicalPartAuth { authority, path } →
+    Authority.print opts authority <> Path.print (opts.printPath path)
   HierarchicalPartNoAuth p →
     maybe "" (either PathAbs.print PathRootless.print <<< opts.printHierPath) p
 
@@ -127,7 +129,7 @@ _authority
       (HierarchicalPart userInfo hosts path hierPath)
       (Authority userInfo hosts)
 _authority = wander \f → case _ of
-  HierarchicalPartAuth a p → flip HierarchicalPartAuth p <$> f a
+  HierarchicalPartAuth rec → f rec.authority <#> \a -> (HierarchicalPartAuth (rec { authority = a }))
   a → pure a
 
 -- | An affine traversal for the path component of a hierarchical-part, this
@@ -138,7 +140,7 @@ _path
       (HierarchicalPart userInfo hosts path hierPath)
       path
 _path = wander \f → case _ of
-  HierarchicalPartAuth a p → HierarchicalPartAuth a <$> f p
+  HierarchicalPartAuth rec → f rec.path <#> \p -> (HierarchicalPartAuth (rec { path = p }))
   a → pure a
 
 -- | An affine traversal for the path component of a hierarchical-part, this
