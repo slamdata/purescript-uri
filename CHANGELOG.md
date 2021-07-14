@@ -11,6 +11,7 @@ New features:
 Bugfixes:
 
 Other improvements:
+- Added test for long queries to check for stack safety
 
 ## [v8.0.1](https://github.com/purescript-contrib/purescript-uri/releases/tag/v8.0.1) - 2021-05-06
 
